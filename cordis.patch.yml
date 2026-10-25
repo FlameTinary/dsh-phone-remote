@@ -3,5 +3,5 @@
 # `plugin_manager set_plugin`.
 - insert:
     - id: phone-remote
-      name: dsh-phone-remote
+      name: "@flametinary/dsh-phone-remote"
       config: {}

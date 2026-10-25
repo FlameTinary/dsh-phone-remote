@@ -5,11 +5,17 @@
 > [!IMPORTANT]
 > **本插件只适用于 DeepSeek Harness 桌面客户端。**
 >
-> dsh-phone-remote 是一个 **DeepSeek Harness Host 插件**，它运行在 DeepSeek Harness 客户端进程内部，只把本机正在运行的 Harness Web UI 镜像到局域网。它**不是**通用反向代理、**不是**内网穿透、**不是**独立网站，也**不能**用于 Claude Code、Cursor、Codex、VS Code、ChatGPT 或其他 AI 客户端。没有 DeepSeek Harness 客户端，这个插件没有任何作用。
+> dsh-phone-remote 是一个 **DeepSeek Harness 插件（Host + 设置页 Client）**，它运行在 DeepSeek Harness 客户端进程内部，只把本机正在运行的 Harness Web UI 镜像到局域网。它**不是**通用反向代理、**不是**内网穿透、**不是**独立网站，也**不能**用于 Claude Code、Cursor、Codex、VS Code、ChatGPT 或其他 AI 客户端。没有 DeepSeek Harness 客户端，这个插件没有任何作用。
 >
-> **DSH only.** This is a host-only plugin for the **DeepSeek Harness desktop client**. It mirrors the client's local Web UI over your LAN. It is not a generic reverse proxy, tunnel, or standalone server, and it does not work with any other AI client.
+> **DSH only.** This is a DeepSeek Harness plugin (Host + settings-page Client) for the **DeepSeek Harness desktop client**. It mirrors the client's local Web UI over your LAN. It is not a generic reverse proxy, tunnel, or standalone server, and it does not work with any other AI client.
 
 把手机或平板变成 DeepSeek Harness 的第二块屏幕：同一个局域网、一个链接，直接打开桌面客户端里正在进行的会话，不需要公网、不需要安装 App。
+
+![手机远程访问的设置页](docs/settings-page.png)
+
+> 截图中的访问密钥已打码。
+
+> 设置页入口：**插件 → 已安装插件 → 手机远程访问**。改完参数点「保存并应用」即可，网关会自动重启。
 
 ```
 ┌─────────────┐    LAN HTTP / WebSocket     ┌──────────────────────────────────┐
@@ -76,6 +82,7 @@
 - **访问密钥保护**：入口支持 `?k=` 自动登录、网关 Cookie 和可选 HTTP Basic，三种方式任选其一。
 - **局域网白名单**：只接受回环地址与配置中的 IPv4 CIDR，默认根据本机网卡生成 `/24` 白名单。
 - **自动代签 Harness 会话**：在客户端进程内用本机凭据为浏览器签发 30 天有效的会话 Cookie，上游返回 401 时自动换一次凭据重试。
+- **应用内设置页**：在插件详情页直接修改监听端口、上游端口、网段白名单、Basic 凭据、访问密钥与移动端增强；保存后自动重写 `config.json` 并重启网关。
 - **随插件启停**：在 DeepSeek Harness 的插件设置里关闭插件，监听端口立即关闭；重新打开即可恢复。
 - **移动端抽屉增强**：窄屏下把 Harness 自带的侧边栏变成滑出抽屉，补一个汉堡按钮，并避免 iOS 输入框自动放大。
 - **零第三方依赖**：只用 Node.js 标准库。
@@ -85,14 +92,15 @@
 
 ## 工作原理
 
-1. 插件作为 DeepSeek Harness 的 Host bundle 启动，在 `0.0.0.0:58800` 上创建自己的 HTTP 服务器（不占用 Harness 原监听端口，也不向其挂路由）。
+1. 插件作为 DeepSeek Harness 的 Host bundle 启动，在 `0.0.0.0:58800` 上创建自己的 HTTP 服务器；另外在 Harness 的 `webServer` 上注册一个仅限本机回环的配置接口 `/phone-remote/api/config`，供设置页读写配置。
 2. 上游地址优先通过 `ctx.webServer.getOrigin()` 获取；失败时回退到 `ps` + `lsof` 探测 Harness Web UI 的 `127.0.0.1` 端口，结果缓存 8 秒。
 3. 每个请求先做来源网段检查，再做访问密钥 / Basic 鉴权。
 4. 通过鉴权后，插件读取本机 `~/.dsh/.credentials.yaml` 里的 `client-connection/browser-session` secret，用 HMAC-SHA256 代签 Harness 浏览器会话 Cookie，再转发请求。
 5. 对 HTML 文档请求，插件把移动端抽屉的 CSS/JS 注入到 `</body>` 前；其余资源原样透传。
 6. WebSocket 升级请求在鉴权后透传到上游，双向 pipe。
+7. 设置页（`client.js`）通过 `plugins.bundle.config` 槽位挂在插件详情页，调用同源接口读取/保存配置；保存后插件重建网关实例并重新监听。
 
-插件**不会**修改 Harness 的配置、不会在 Harness Web 服务器上注册路由，也不会把凭据写进日志。
+除了这个仅限本机回环的配置接口，插件**不会**在 Harness Web 服务器上注册其他路由、不会修改 Harness 配置，也不会把凭据写进日志。
 
 ---
 
@@ -120,6 +128,8 @@
 3. 在安装源中填入**本地目录的绝对路径**，例如 `/Users/sheldon/CodeRepo/dsh-phone-remote`，点击「安装」。
 4. 安装完成后，在 **「已安装插件」** 中找到 **「手机远程访问」（Phone Remote）**，确认开关为开启状态。
 
+> 从 0.1.x 升级：包名已改为 `@flametinary/dsh-phone-remote`。请先卸载旧插件，再按本节重新安装；`~/.dsh/phone-remote/` 下的配置、密钥和日志会保留。
+
 > 插件安装是「链接目录」方式：之后 `git pull` 更新代码，重启 DeepSeek Harness 即可加载新版本，无需重复安装。
 
 ### 方式 B：通过插件管理工具安装（自动化 / 远程排障）
@@ -133,13 +143,13 @@
 安装成功后用 `list_bundles` 应能看到：
 
 ```text
-dsh-phone-remote  0.1.0  availability=profile  installed=true  enabled=true
+@flametinary/dsh-phone-remote  0.2.1  availability=profile  installed=true  enabled=true
 ```
 
 启用 / 停用：
 
 ```json
-{ "action": "set_bundle", "target": "dsh-phone-remote", "enabled": false }
+{ "action": "set_bundle", "target": "@flametinary/dsh-phone-remote", "enabled": false }
 ```
 
 ### 首次启动做了什么
@@ -201,11 +211,22 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 - 关闭开关：网关立即停止监听，手机无法再连接；
 - 打开开关：重新监听，链接与密钥不变。
 
+### 5. 在应用内修改配置
+
+打开 **插件 → 已安装插件 → 手机远程访问**，详情页会直接渲染配置面板：
+
+- **手机入口**：当前所有可用局域网链接，可一键复制；
+- **网络**：监听端口、上游端口、IPv4 网段白名单、移动端抽屉增强；
+- **访问凭据**：Basic 用户名/密码、访问密钥（可显示、复制、重新生成）；
+- **保存并应用**：写入 `~/.dsh/phone-remote/config.json` 并自动重启网关，不需要手动关开插件。
+
+配置接口只监听在 Harness 自己的 `webServer` 上，且只接受本机回环地址；它要求携带 `x-phone-remote-config: 1` 的 JSON 请求，跨站请求无法通过浏览器预检。
+
 ---
 
 ## 配置
 
-配置文件：`~/.dsh/phone-remote/config.json`（首次启动自动生成，`0600`）。
+推荐直接在**插件设置页**修改。配置文件位于 `~/.dsh/phone-remote/config.json`（首次启动自动生成，`0600`），高级用户也可以手动编辑。
 
 ```json
 {
@@ -232,15 +253,13 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 | `uiEnhance.mobileDrawer` | `true` | 是否注入移动端抽屉增强。关掉后手机仍可用，但侧边栏体验退化为桌面布局。 |
 | `logMaxBytes` | `1048576` | 日志轮转阈值；超过后轮转为 `gateway.log.1`。 |
 
-修改配置后，在插件设置里**关闭再打开**插件（或重启 DeepSeek Harness）使其生效。
+在设置页点「保存并应用」后网关会自动重启；手动编辑 JSON 后，仍需在插件设置里关闭再打开（或重启客户端）使其生效。
 
 ### 轮换访问密钥
 
-1. 在设置中关闭插件；
-2. 编辑 `config.json`，删除 `accessKey` / `basicPass` 字段（下次启动会重新随机生成），或写入你自己的新值；
-3. 重新打开插件，重新获取手机链接。
+在设置页的「访问凭据」里点 **重新生成** 即可；旧链接和旧 Cookie 会立即失效，重新复制手机链接即可。
 
-旧链接与旧 Cookie 会立即失效。
+也可以手动编辑 `config.json`，删除 `accessKey` / `basicPass` 字段（下次启动会重新随机生成），再关闭/打开插件。
 
 ---
 
@@ -252,6 +271,7 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 - **仅限局域网。** 默认白名单为本机 + 当前网卡的 `/24`，不要为了「在外面也能用」把 `allowCidrs` 改成 `0.0.0.0/0` 或在路由器上做端口映射。需要公网访问请使用 VPN（如 Tailscale / WireGuard），不要把本插件直接暴露到公网。
 - **没有 TLS。** 网关使用 HTTP/WS 明文传输，同一 Wi-Fi 下的其他人可能嗅探流量。只在你信任的网络中使用；不要在公共 Wi-Fi、酒店网络或公司访客网络启用。
 - **Cookie 有效期为 30 天**，每次请求都会重新签发；凭据轮换或客户端升级后可能失效，重新打开 `?k=` 链接即可。
+- **配置页同样敏感。** 能打开设置页的人可以改端口、网段和访问密钥；配置接口只接受**本机回环地址**的请求，并要求带 `x-phone-remote-config: 1` 的 JSON 请求（跨站请求会被预检拦截）；手机设置页通过网关代理访问时仍走回环。即便如此，也请只在可信设备上打开设置页。
 - **配置文件含明文密钥**，权限为 `0600`；`phone-url.txt` 同样含密钥与 Basic 密码，请不要提交到 Git、不要发到群聊。
 - **日志不记录 Cookie 值**，但会记录请求路径、来源 IP 与错误信息；分享日志前请自行检查。
 - **非官方插件**：它不修改客户端二进制，但以你的用户权限在客户端进程内运行。请只从可信来源安装，并在升级 DeepSeek Harness 后确认兼容性。
@@ -317,7 +337,7 @@ cd /path/to/dsh-phone-remote
 git pull
 ```
 
-然后在 DeepSeek Harness 中**重启客户端**（或卸载后重装插件），以加载新的 JS。插件是目录链接安装，不需要重新执行安装步骤。
+然后在 DeepSeek Harness 中**重启客户端**，以加载新的 Host / Client JS。若包名或 `dsh.client` 声明发生变化（0.2.0 起新增设置页），需要卸载后重新安装一次；配置与密钥保留在 `~/.dsh/phone-remote/`。
 
 ### 卸载
 
@@ -366,12 +386,13 @@ PHONE_REMOTE_PORT=58801 node scripts/verify.mjs
 目录结构：
 
 ```text
-index.js              # Host 插件入口：apply / inject / ctx.effect
+index.js              # Host 插件入口：apply / inject / 配置接口 / ctx.effect
+client.js             # 设置页（plugins.bundle.config 槽位）
 cordis.patch.yml      # DSH bundle patch（row id: phone-remote）
-locale/{zh,en}.json   # 设置页显示名与描述
+locale/{zh,en}.json   # 插件卡片显示名与描述
 icon.svg              # 设置页图标
 lib/
-  config.js           # 配置加载、迁移、默认值、手机 URL
+  config.js           # 配置加载、迁移、校验、更新、手机 URL
   auth.js             # Basic / Cookie 鉴权、CIDR 判断
   session.js          # Harness 会话 Cookie 代签与凭据缓存
   upstream.js         # getOrigin → ps/lsof 回退发现
@@ -381,6 +402,7 @@ lib/
 ui/                   # mobile-drawer.css / mobile-drawer.js
 bin/phone-remote.mjs  # url / status / config 命令行
 scripts/              # dev-server.mjs / verify.mjs
+docs/settings-page.png # 设置页截图
 ```
 
 ---
@@ -393,7 +415,7 @@ scripts/              # dev-server.mjs / verify.mjs
 - 移动端增强依赖 Harness Web UI 的 DOM 结构（`titleRow`、`aria-label="打开侧边栏"` 等），客户端大改版后可能需要适配。
 - 会话 Cookie 的签名格式依赖客户端实现；DSH 升级后若鉴权失败，需要更新插件。
 - 端口占用时只重试、不自动改端口；需要手动修改 `listenPort`。
-- 无法在插件设置页里可视化编辑配置（Host-only 插件未导出 Config schema），请直接编辑 JSON。
+- 设置页由 Host 与 Client 两半组成：更新 `client.js` 后需要重启客户端（或卸载重装插件）才会生效；只安装 Host 部分时不会显示该页面。
 
 ---
 

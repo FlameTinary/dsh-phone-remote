@@ -5,9 +5,15 @@
 > [!IMPORTANT]
 > **This plugin only works with the DeepSeek Harness desktop client.**
 >
-> dsh-phone-remote is a **host-only DeepSeek Harness plugin**. It runs inside the DeepSeek Harness client process and mirrors that client's local Web UI onto your LAN. It is **not** a generic reverse proxy, **not** a tunnel, **not** a standalone website, and it **does not work** with Claude Code, Cursor, Codex, VS Code, ChatGPT, or any other AI client. Without DeepSeek Harness, this plugin does nothing.
+> dsh-phone-remote is a **DeepSeek Harness plugin (Host + settings-page Client)**. It runs inside the DeepSeek Harness client process and mirrors that client's local Web UI onto your LAN. It is **not** a generic reverse proxy, **not** a tunnel, **not** a standalone website, and it **does not work** with Claude Code, Cursor, Codex, VS Code, ChatGPT, or any other AI client. Without DeepSeek Harness, this plugin does nothing.
 
 Turn a phone or tablet into a second screen for DeepSeek Harness: one link on the same LAN opens the live session running in the desktop client. No public internet, no app to install.
+
+![Phone Remote settings page](docs/settings-page.png)
+
+> The access key is redacted in this screenshot.
+
+> Open **Plugins → Installed plugins → Phone Remote**. Change settings, then click **Save and apply**; the gateway restarts automatically.
 
 ```
 ┌─────────────┐    LAN HTTP / WebSocket     ┌──────────────────────────────────┐
@@ -54,6 +60,7 @@ Without them the plugin cannot work, which is why it is **DeepSeek Harness only*
 - **Access protection**: `?k=` auto-login, gateway cookie, or optional HTTP Basic.
 - **LAN allowlist**: loopback plus configured IPv4 CIDRs; defaults are derived from local interfaces.
 - **Automatic Harness session minting**: signs a 30-day browser session cookie in-process, retries once with a fresh credential on upstream 401.
+- **In-app settings page**: edit the listen port, upstream port, CIDR allowlist, Basic credentials, access key, and mobile enhancement right on the plugin page; saving rewrites `config.json` and restarts the gateway.
 - **Follows the plugin switch**: disabling the plugin in DeepSeek Harness closes the listener immediately; enabling it brings it back.
 - **Mobile drawer enhancement**: on narrow screens the built-in sidebar becomes a slide-out drawer with a hamburger button, and iOS input zoom is avoided.
 - **Zero third-party dependencies**: Node.js standard library only.
@@ -63,14 +70,15 @@ Without them the plugin cannot work, which is why it is **DeepSeek Harness only*
 
 ## How it works
 
-1. The plugin starts as a host bundle and creates its own HTTP server on `0.0.0.0:58800` (it does not occupy the Harness listener or register routes on it).
+1. The plugin starts as a host bundle and creates its own HTTP server on `0.0.0.0:58800`; it also registers one loopback-only config endpoint, `/phone-remote/api/config`, on the Harness `webServer` for the settings page.
 2. The upstream origin comes from `ctx.webServer.getOrigin()`; if that fails it falls back to `ps` + `lsof` discovery of the Harness Web UI port, cached for 8 seconds.
 3. Each request is checked against the source CIDR allowlist, then authenticated by access key or Basic.
 4. It reads the local `~/.dsh/.credentials.yaml` record `client-connection/browser-session`, mints a Harness browser-session cookie with HMAC-SHA256, and forwards the request.
 5. For HTML documents it injects the mobile drawer CSS/JS before `</body>`; everything else is passed through.
 6. WebSocket upgrades are authenticated and piped both ways.
+7. The settings page (`client.js`) mounts through the `plugins.bundle.config` slot, calls the same-origin config API, and saving rebuilds the gateway instance.
 
-The plugin never edits Harness configuration, never registers routes on the Harness web server, and never logs credential values.
+Apart from that loopback-only config endpoint, the plugin never registers routes on the Harness web server, never edits Harness configuration, and never logs credential values.
 
 ---
 
@@ -98,6 +106,8 @@ The plugin never edits Harness configuration, never registers routes on the Harn
 3. Enter the **absolute local path** to this directory, e.g. `/Users/sheldon/CodeRepo/dsh-phone-remote`, then click **Install**.
 4. Under **Installed plugins**, find **Phone Remote** and make sure its switch is on.
 
+> Upgrading from 0.1.x: the package name is now `@flametinary/dsh-phone-remote`. Uninstall the old plugin and install again; configuration, keys, and logs stay in `~/.dsh/phone-remote/`.
+
 > Installation links the checkout. After `git pull`, restart DeepSeek Harness to load the new JS; no reinstall is needed.
 
 ### Option B: plugin manager (automation / remote support)
@@ -111,13 +121,13 @@ From a DeepSeek Harness agent session:
 `list_bundles` should then show:
 
 ```text
-dsh-phone-remote  0.1.0  availability=profile  installed=true  enabled=true
+@flametinary/dsh-phone-remote  0.2.1  availability=profile  installed=true  enabled=true
 ```
 
 Enable or disable with:
 
 ```json
-{ "action": "set_bundle", "target": "dsh-phone-remote", "enabled": false }
+{ "action": "set_bundle", "target": "@flametinary/dsh-phone-remote", "enabled": false }
 ```
 
 ### What happens on first start
@@ -179,11 +189,22 @@ DeepSeek Harness → Plugins → Installed plugins → **Phone Remote**:
 - off: the listener closes immediately and the phone can no longer connect;
 - on: the listener comes back with the same URL and keys.
 
+### Configure in the app
+
+Open **Plugins → Installed plugins → Phone Remote**. The plugin page renders the configuration panel directly:
+
+- **Phone entry points** — every current LAN URL, with copy buttons;
+- **Network** — listen port, upstream port, IPv4 CIDR allowlist, mobile drawer enhancement;
+- **Access credentials** — Basic username/password and the access key (show, copy, regenerate);
+- **Save and apply** — writes `~/.dsh/phone-remote/config.json` and restarts the gateway; no manual toggle needed.
+
+The config endpoint lives on the Harness `webServer` and accepts only loopback connections. It requires a JSON request with the `x-phone-remote-config: 1` header, so cross-site requests fail the browser preflight.
+
 ---
 
 ## Configuration
 
-File: `~/.dsh/phone-remote/config.json` (created on first start, mode `0600`).
+Use the **plugin settings page** for normal changes. The file is `~/.dsh/phone-remote/config.json` (created on first start, mode `0600`); advanced users can still edit it by hand.
 
 ```json
 {
@@ -210,15 +231,13 @@ File: `~/.dsh/phone-remote/config.json` (created on first start, mode `0600`).
 | `uiEnhance.mobileDrawer` | `true` | Inject the mobile drawer enhancement. |
 | `logMaxBytes` | `1048576` | Log rotation threshold; rotates to `gateway.log.1`. |
 
-After editing, toggle the plugin off/on (or restart DeepSeek Harness).
+Saving on the settings page restarts the gateway automatically. After editing the JSON by hand, toggle the plugin off/on (or restart the client).
 
 ### Rotate the access key
 
-1. Disable the plugin.
-2. Edit `config.json`: delete `accessKey` / `basicPass` (new random values are generated on start) or set your own.
-3. Re-enable the plugin and copy the new phone link.
+Click **Regenerate** under Access credentials on the settings page. Old links and cookies stop working immediately; copy the new phone link.
 
-Old links and cookies stop working immediately.
+You can also edit `config.json`: delete `accessKey` / `basicPass` (new random values are generated on start), then toggle the plugin off/on.
 
 ---
 
@@ -230,6 +249,7 @@ The plugin exposes **full control of the DeepSeek Harness client** to any authen
 - **LAN only.** The default allowlist is loopback plus the current `/24`. Do not set `allowCidrs` to `0.0.0.0/0` and do not port-forward it on your router. For remote access, use a VPN (Tailscale, WireGuard, …).
 - **No TLS.** Traffic is plain HTTP/WS and can be sniffed on the same Wi-Fi. Use trusted networks only; avoid public/guest Wi-Fi.
 - **Cookies last 30 days** and are re-minted per request; they may break after credential rotation or a client upgrade — reopen the `?k=` link.
+- **The settings page is sensitive too.** Anyone who can open it can change ports, networks, and the access key. The config endpoint accepts only **loopback** connections and requires a JSON request with `x-phone-remote-config: 1` (cross-site preflight is not approved); the phone reaches it through the gateway, which is loopback upstream. Even so, only open it on trusted devices.
 - **The config contains plaintext secrets** (mode `0600`); `phone-url.txt` also contains keys. Never commit or share them.
 - **Logs exclude cookie values** but include paths, source IPs, and errors; review before sharing.
 - **Unofficial plugin**: it does not modify client binaries, but it runs with your user privileges inside the client process. Install only from trusted sources and re-check compatibility after DSH upgrades.
@@ -295,7 +315,7 @@ cd /path/to/dsh-phone-remote
 git pull
 ```
 
-Then **restart DeepSeek Harness** (or uninstall/reinstall the plugin) to load the new JS. The checkout is linked, so no reinstall step is needed.
+Then **restart DeepSeek Harness** to load the new Host / Client JS. If the package name or the `dsh.client` declaration changed (the settings page was added in 0.2.0), uninstall and reinstall once; configuration and keys stay in `~/.dsh/phone-remote/`.
 
 ### Uninstall
 
@@ -332,14 +352,16 @@ PHONE_REMOTE_PORT=58801 node scripts/verify.mjs
 Layout:
 
 ```text
-index.js              # host entry: apply / inject / ctx.effect
+index.js              # host entry: apply / inject / config API / ctx.effect
+client.js             # settings page (plugins.bundle.config slot)
 cordis.patch.yml      # bundle patch (row id: phone-remote)
-locale/{zh,en}.json   # settings title and description
+locale/{zh,en}.json   # plugin card title and description
 icon.svg              # settings icon
-lib/                  # config, auth, session, upstream, gateway, log, ui
+lib/                  # config (load/migrate/validate/update), auth, session, upstream, gateway, log, ui
 ui/                   # mobile-drawer.css / mobile-drawer.js
 bin/phone-remote.mjs  # url / status / config
 scripts/              # dev-server.mjs / verify.mjs
+docs/settings-page.png # settings page screenshot
 ```
 
 ---
@@ -352,7 +374,7 @@ scripts/              # dev-server.mjs / verify.mjs
 - The mobile enhancement depends on the Harness DOM structure (`titleRow`, `aria-label="打开侧边栏"`, …) and may need adaptation after major client UI changes.
 - Session cookie signing depends on the client implementation; a DSH upgrade may require a plugin update.
 - On port conflict the plugin retries but does not auto-pick another port.
-- No visual config editor (the host-only bundle does not export a Config schema); edit the JSON directly.
+- The settings page needs both halves (Host + Client): after editing `client.js`, restart the client (or uninstall/reinstall) to pick it up. A Host-only install will not show the page.
 
 ---
 

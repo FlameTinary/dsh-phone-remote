@@ -31,7 +31,7 @@ if (Number.isInteger(upstreamOverride) && upstreamOverride >= 1) {
 const log = createLogger(paths, { maxBytes: config.logMaxBytes });
 const gateway = createPhoneGateway({
   config,
-  version: '0.1.0-dev',
+  version: '0.2.1-dev',
   configPath: paths.configFile,
   phoneUrlFile: paths.phoneUrlFile,
   uiDir: path.join(root, 'ui'),
