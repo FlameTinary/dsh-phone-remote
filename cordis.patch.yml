@@ -1,0 +1,7 @@
+# DSH bundle patch. `plugin_manager install_bundle` mounts this row into the
+# profile; the row id is the stable id used by the Plugins UI and by
+# `plugin_manager set_plugin`.
+- insert:
+    - id: phone-remote
+      name: dsh-phone-remote
+      config: {}

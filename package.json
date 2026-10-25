@@ -1,0 +1,59 @@
+{
+  "name": "dsh-phone-remote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Open the DeepSeek Harness desktop Web UI from a phone or tablet on your LAN. Host-only DSH plugin with access-key auth, session-cookie minting and a mobile drawer patch.",
+  "license": "MIT",
+  "author": {
+    "name": "Sheldon"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "bin": {
+    "dsh-phone-remote": "./bin/phone-remote.mjs"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "ui",
+    "locale/*.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE",
+    "README.en.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "phone",
+    "remote",
+    "lan"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FlameTinary/dsh-phone-remote.git"
+  },
+  "homepage": "https://github.com/FlameTinary/dsh-phone-remote#readme",
+  "bugs": {
+    "url": "https://github.com/FlameTinary/dsh-phone-remote/issues"
+  }
+}

@@ -1,0 +1,121 @@
+/* 手机端：内容全宽 + 左侧抽屉 + 顶栏汉堡按钮（仅 ≤768px 生效，桌面外观不变）。 */
+@media (max-width: 768px) {
+  /* 侧栏不再占列：内容直接铺满整屏 */
+  [data-rightbar-collapsed] {
+    grid-template-columns: 0 minmax(0, 1fr) 0 !important;
+    transition: none !important;
+  }
+
+  /* 侧栏变成 position:fixed 后不再参与网格排布，显式把内容/右栏钉回第 2、3 列 */
+  [class*="centerCol"] {
+    grid-column: 2 !important;
+  }
+
+  [class*="rightbarCol"] {
+    grid-column: 3 !important;
+  }
+
+  /* 侧栏变成从左侧滑出的抽屉，默认藏在屏幕外 */
+  [class*="sidebarCol"] {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(86vw, 330px) !important;
+    max-width: 330px;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1200;
+    visibility: hidden;
+    transform: translateX(-102%);
+    transition: transform 0.22s ease, visibility 0s linear 0.22s;
+    border-right: 1px solid rgba(128, 128, 128, 0.18);
+    border-radius: 0;
+    box-shadow: 0 10px 42px rgba(0, 0, 0, 0.5);
+    overscroll-behavior: contain;
+  }
+
+  html.dsh-drawer-open [class*="sidebarCol"] {
+    visibility: visible;
+    transform: translateX(0);
+    transition: transform 0.22s ease, visibility 0s linear 0s;
+  }
+
+  /* 顶栏里的汉堡按钮 */
+  .dsh-hamburger {
+    flex: 0 0 auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: 0 10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dsh-hamburger:active {
+    background: rgba(128, 128, 128, 0.18);
+  }
+
+  .dsh-hamburger svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  /* 找不到顶栏时的兜底：浮动在左上角 */
+  .dsh-hamburger-floating {
+    position: fixed !important;
+    left: 10px;
+    top: 8px;
+    z-index: 1150;
+  }
+
+  /* 背景遮罩：只有抽屉打开时才可点，点一下收起 */
+  .dsh-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1190;
+    background: rgba(0, 0, 0, 0.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html.dsh-drawer-open .dsh-drawer-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* iOS Safari 会在聚焦字号 <16px 的输入位时自动放大整个页面。
+     窄屏下把可编辑元素的字号提到 16px，键盘弹起时页面不再缩放。 */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select,
+  [contenteditable="true"],
+  [contenteditable=""] {
+    font-size: 16px !important;
+  }
+
+}
+
+@media (min-width: 769px) {
+  .dsh-hamburger,
+  .dsh-hamburger-floating,
+  .dsh-drawer-backdrop {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="sidebarCol"] {
+    transition: none !important;
+  }
+}
