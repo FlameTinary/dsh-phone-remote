@@ -1,9 +1,9 @@
 {
   "name": "@flametinary/dsh-phone-remote",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Open the DeepSeek Harness desktop Web UI from a phone or tablet on your LAN, with an in-app settings page for ports, networks and access credentials. Host + client DSH plugin.",
+  "description": "Open the DeepSeek Harness desktop Web UI from a phone on your LAN, or through an optional Cloudflare tunnel from anywhere, with an in-app settings page for ports, networks and access credentials. Host + client DSH plugin.",
   "license": "MIT",
   "author": {
     "name": "Sheldon"
@@ -40,7 +40,9 @@
     "dsh-plugin",
     "phone",
     "remote",
-    "lan"
+    "lan",
+    "cloudflare",
+    "tunnel"
   ],
   "scripts": {
     "dev": "node scripts/dev-server.mjs",

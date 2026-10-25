@@ -52,7 +52,35 @@ window.__ModuleLoader__.load({
         serverAuto: '自动发现中',
         configPath: '配置文件',
         logPath: '日志',
-        footer: '仅适用于 DeepSeek Harness 桌面客户端。不要在公网暴露该端口。',
+        cloudflareTitle: '外网访问（Cloudflare）',
+        cloudflareHint: '不在同一局域网时，手机通过 Cloudflare 隧道连接；局域网内仍优先直连。',
+        cfEnabled: '启用 Cloudflare 外网访问',
+        cfMode: '连接方式',
+        cfModeQuick: '快速隧道（临时地址，仅连通性测试）',
+        cfModeToken: '命名隧道（需 Cloudflare 账号，推荐）',
+        cfQuickWarning: 'Cloudflare 快速隧道不支持 SSE（官方限制），Harness 会停在「加载插件…」。要完整使用请改用命名隧道。',
+        cfToken: 'Tunnel Token',
+        cfTokenHint: 'Cloudflare Zero Trust 创建隧道后复制的 token。只保存在本机 config.json。',
+        cfPublicUrl: '公网地址',
+        cfPublicUrlHint: '命名隧道在 Cloudflare 绑定的主机名，例如 https://dsh.example.com。',
+        cfPath: 'cloudflared 路径',
+        cfPathHint: '默认从 PATH 查找；Homebrew 通常是 /opt/homebrew/bin/cloudflared。',
+        cfAutoLan: '同一局域网自动切回 LAN',
+        cfAutoLanHint: '手机在家庭网络时，Cloudflare 入口会自动跳回局域网地址；外网仍走 Cloudflare。依赖公网 IP 判断，少数网络可能不生效。',
+        cfRunning: '已连接',
+        cfStopped: '未运行',
+        cfDisabled: '未启用',
+        cfWaiting: '等待公网地址…',
+        cfError: '隧道异常',
+        cfRemoteTitle: '外网链接',
+        cfRemoteHint: '这个链接带访问密钥，局域网和外网都可用；同一局域网内会自动跳回手机入口。',
+        cfNoRemote: '启用并保存后，这里会显示 Cloudflare 公网链接。',
+        cfOpen: '打开',
+        cfRefresh: '刷新状态',
+        cfTokenRequired: '使用命名隧道时请填写 Tunnel Token。',
+        cfLog: 'Cloudflare 日志',
+        cfNote: '公网入口仅由访问密钥 / Basic 保护。建议在 Cloudflare 侧再加 Access 策略，并定期重新生成访问密钥。',
+        footer: '仅适用于 DeepSeek Harness 桌面客户端。不要再把网关端口直接暴露到公网。',
       },
       en: {
         title: 'Phone Remote',
@@ -98,7 +126,35 @@ window.__ModuleLoader__.load({
         serverAuto: 'Detecting',
         configPath: 'Config file',
         logPath: 'Log',
-        footer: 'Only for the DeepSeek Harness desktop client. Never expose this port to the public internet.',
+        cloudflareTitle: 'Remote access (Cloudflare)',
+        cloudflareHint: 'When your phone is not on the same LAN, it connects through a Cloudflare tunnel; on the home network the LAN link is still preferred.',
+        cfEnabled: 'Enable Cloudflare remote access',
+        cfMode: 'Connection mode',
+        cfModeQuick: 'Quick tunnel (temporary URL, connectivity test only)',
+        cfModeToken: 'Named tunnel (Cloudflare account required, recommended)',
+        cfQuickWarning: 'Cloudflare Quick Tunnels do not support SSE, so the Harness UI can stay at “Loading plugins…”. Use a named tunnel for the full app.',
+        cfToken: 'Tunnel token',
+        cfTokenHint: 'The token Cloudflare Zero Trust shows after creating a tunnel. It is stored only in the local config.json.',
+        cfPublicUrl: 'Public URL',
+        cfPublicUrlHint: 'The hostname bound to the named tunnel, for example https://dsh.example.com.',
+        cfPath: 'cloudflared path',
+        cfPathHint: 'Looked up on PATH by default; Homebrew usually installs to /opt/homebrew/bin/cloudflared.',
+        cfAutoLan: 'Switch back to LAN on the same network',
+        cfAutoLanHint: 'When the phone is on the home network, the Cloudflare entry redirects to the LAN address; outside it stays on Cloudflare. This relies on public-IP detection and can miss some networks.',
+        cfRunning: 'Connected',
+        cfStopped: 'Not running',
+        cfDisabled: 'Not enabled',
+        cfWaiting: 'Waiting for a public URL…',
+        cfError: 'Tunnel error',
+        cfRemoteTitle: 'Public link',
+        cfRemoteHint: 'This link carries the access key and works both on the LAN and outside; on the same LAN it redirects back to the phone entry.',
+        cfNoRemote: 'Save with Cloudflare enabled to get a public link.',
+        cfOpen: 'Open',
+        cfRefresh: 'Refresh status',
+        cfTokenRequired: 'A tunnel token is required for a named tunnel.',
+        cfLog: 'Cloudflare log',
+        cfNote: 'The public entry is protected by the access key / Basic auth only. Add a Cloudflare Access policy as well, and rotate the access key regularly.',
+        footer: 'Only for the DeepSeek Harness desktop client. Never expose the gateway port directly to the public internet.',
       },
     };
 
@@ -153,11 +209,15 @@ window.__ModuleLoader__.load({
 .dpr-row .dpr-input { flex:1; min-width:0; }
 .dpr-btn { border:1px solid var(--dsw-alias-border-l2); background:transparent; color:var(--dsw-alias-label-primary); border-radius:8px; padding:7px 11px; font:inherit; font-size:12px; cursor:pointer; white-space:nowrap; }
 .dpr-btn:hover:not(:disabled) { border-color:var(--dsw-alias-label-secondary); }
+.dpr-btn { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+.dpr-cloudflare { display:grid; gap:12px; }
+.dpr-select { height:38px; cursor:pointer; }
 .dpr-btn.primary { background:var(--dsw-alias-brand-primary); border-color:transparent; color:var(--dsw-alias-bg-base); font-weight:600; }
 .dpr-btn.primary:hover:not(:disabled) { filter:brightness(1.06); }
 .dpr-btn.danger { color:var(--dsw-alias-state-error-primary); border-color:color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent); }
 .dpr-btn:disabled { opacity:.55; cursor:default; }
 .dpr-note { margin:0; color:var(--dsw-alias-label-secondary); font-size:12px; }
+.dpr-warn { margin:0; color:var(--dsw-alias-state-warn-primary); font-size:12px; line-height:1.5; }
 .dpr-links { display:grid; gap:8px; }
 .dpr-check { display:flex; align-items:center; gap:8px; font-size:13px; }
 .dpr-check input { width:15px; height:15px; accent-color:var(--dsw-alias-brand-primary); }
@@ -208,6 +268,14 @@ window.__ModuleLoader__.load({
           basicPass: data.basicPass ?? '',
           allowCidrs: (data.allowCidrs ?? []).join('\n'),
           mobileDrawer: data.mobileDrawer !== false,
+          cloudflare: {
+            enabled: data.cloudflareConfig?.enabled === true,
+            mode: data.cloudflareConfig?.mode === 'token' ? 'token' : 'quick',
+            token: data.cloudflareConfig?.token ?? '',
+            publicUrl: data.cloudflareConfig?.publicUrl ?? '',
+            autoLanRedirect: data.cloudflareConfig?.autoLanRedirect !== false,
+            cloudflaredPath: data.cloudflareConfig?.cloudflaredPath ?? 'cloudflared',
+          },
         });
       }
 
@@ -264,6 +332,14 @@ window.__ModuleLoader__.load({
         setDraft((current) => ({ ...current, [key]: value }));
       };
 
+      const setCf = (key) => (event) => {
+        const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+        setDraft((current) => ({
+          ...current,
+          cloudflare: { ...current.cloudflare, [key]: value },
+        }));
+      };
+
       async function copy(value, id) {
         const ok = await copyText(value);
         if (ok) {
@@ -276,6 +352,10 @@ window.__ModuleLoader__.load({
 
       async function save() {
         if (!draft) return;
+        if (draft.cloudflare.enabled && draft.cloudflare.mode === 'token' && !draft.cloudflare.token.trim()) {
+          setError(t('cfTokenRequired'));
+          return;
+        }
         const previousPort = state.port ?? state.configuredPort;
         setSaving(true);
         setError('');
@@ -289,6 +369,14 @@ window.__ModuleLoader__.load({
             basicPass: draft.basicPass,
             allowCidrs: draft.allowCidrs.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean),
             mobileDrawer: Boolean(draft.mobileDrawer),
+            cloudflare: {
+              enabled: Boolean(draft.cloudflare.enabled),
+              mode: draft.cloudflare.mode,
+              token: draft.cloudflare.token,
+              publicUrl: draft.cloudflare.publicUrl.trim(),
+              autoLanRedirect: Boolean(draft.cloudflare.autoLanRedirect),
+              cloudflaredPath: draft.cloudflare.cloudflaredPath.trim() || 'cloudflared',
+            },
           };
           const data = await request('POST', payload);
           adopt(data);
@@ -301,6 +389,9 @@ window.__ModuleLoader__.load({
           setNotice(t('saved'));
           setTimeout(() => load({ silent: true }), 700);
           setTimeout(() => load({ silent: true }), 1700);
+          if (payload.cloudflare.enabled && payload.cloudflare.mode === 'quick') {
+            setTimeout(() => load({ silent: true }), 4000);
+          }
         } catch (saveError) {
           setError(saveError.message);
         } finally {
@@ -353,12 +444,23 @@ window.__ModuleLoader__.load({
       if (!state || !draft) return null;
 
       const urls = state.phoneUrls ?? [];
+      const cf = state.cloudflare ?? {};
+      const cfUrls = state.remoteUrls ?? [];
+      const cfEnabled = draft.cloudflare.enabled;
       const busy = saving || state.restarting;
       const statusText = state.restarting ? t('restarting') : state.listening ? t('running') : t('stopped');
+      const cfStatus = !cfEnabled
+        ? t('cfDisabled')
+        : cf.running
+          ? t('cfRunning')
+          : cf.error
+            ? t('cfError')
+            : t('cfWaiting');
+      const cfAddress = cf.publicUrl || cf.configuredUrl || '';
 
       return h(
         'div',
-        { className: 'dpr-root', 'data-dpr-build': '2026-10-25b' },
+        { className: 'dpr-root', 'data-dpr-build': '2026-10-25c' },
         h('style', null, CSS),
         h(
           'div',
@@ -390,6 +492,118 @@ window.__ModuleLoader__.load({
                   h('button', { className: 'dpr-btn', onClick: () => copy(url, `url-${index}`) }, copied === `url-${index}` ? t('copied') : t('copy')),
                 )),
               ),
+        ),
+        h(
+          'div',
+          { className: 'dpr-card' },
+          h('h4', null, t('cloudflareTitle')),
+          h('p', { className: 'dpr-note' }, t('cloudflareHint')),
+          h(
+            'label',
+            { className: 'dpr-check' },
+            h('input', { type: 'checkbox', checked: draft.cloudflare.enabled, onChange: setCf('enabled') }),
+            h('span', null, t('cfEnabled')),
+          ),
+          draft.cloudflare.enabled ? h(
+            'div',
+            { className: 'dpr-cloudflare' },
+            h(
+              'div',
+              { className: 'dpr-status' },
+              h('span', { className: `dpr-dot ${cf.running ? 'on' : 'busy'}` }),
+              h('span', null, cfStatus),
+              cfAddress ? h('span', { style: { opacity: 0.5 } }, '·') : null,
+              cfAddress ? h('code', null, cfAddress) : null,
+            ),
+            h(
+              'div',
+              { className: 'dpr-grid' },
+              h(
+                LabeledField,
+                { id: 'dpr-cf-mode', label: t('cfMode') },
+                h(
+                  'select',
+                  { id: 'dpr-cf-mode', className: 'dpr-input dpr-select', value: draft.cloudflare.mode, onChange: setCf('mode') },
+                  h('option', { value: 'quick' }, t('cfModeQuick')),
+                  h('option', { value: 'token' }, t('cfModeToken')),
+                ),
+              ),
+              h(
+                LabeledField,
+                { id: 'dpr-cf-path', label: t('cfPath'), hint: t('cfPathHint') },
+                h('input', {
+                  id: 'dpr-cf-path',
+                  className: 'dpr-input',
+                  value: draft.cloudflare.cloudflaredPath,
+                  onChange: setCf('cloudflaredPath'),
+                  spellCheck: false,
+                }),
+              ),
+            ),
+            draft.cloudflare.mode === 'quick' ? h('p', { className: 'dpr-warn' }, t('cfQuickWarning')) : null,
+            draft.cloudflare.mode === 'token' ? h(
+              'div',
+              { className: 'dpr-grid' },
+              h(
+                LabeledField,
+                { id: 'dpr-cf-token', label: t('cfToken'), hint: t('cfTokenHint') },
+                h('input', {
+                  id: 'dpr-cf-token',
+                  className: 'dpr-input',
+                  type: 'password',
+                  value: draft.cloudflare.token,
+                  onChange: setCf('token'),
+                  autoComplete: 'off',
+                  spellCheck: false,
+                }),
+              ),
+              h(
+                LabeledField,
+                { id: 'dpr-cf-public-url', label: t('cfPublicUrl'), hint: t('cfPublicUrlHint') },
+                h('input', {
+                  id: 'dpr-cf-public-url',
+                  className: 'dpr-input',
+                  type: 'url',
+                  value: draft.cloudflare.publicUrl,
+                  onChange: setCf('publicUrl'),
+                  placeholder: 'https://dsh.example.com',
+                  spellCheck: false,
+                }),
+              ),
+            ) : h(
+              'div',
+              { className: 'dpr-links' },
+              cf.publicUrl
+                ? h(
+                    'div',
+                    { className: 'dpr-row' },
+                    h('input', { className: 'dpr-input', readOnly: true, value: cf.publicUrl, onFocus: (event) => event.target.select() }),
+                    h('button', { className: 'dpr-btn', onClick: () => copy(cf.publicUrl, 'cf-public') }, copied === 'cf-public' ? t('copied') : t('copy')),
+                    h('a', { className: 'dpr-btn', href: cfUrls[0] || cf.publicUrl, target: '_blank', rel: 'noreferrer' }, t('cfOpen')),
+                  )
+                : h('p', { className: 'dpr-note' }, t('cfWaiting')),
+            ),
+            h(
+              'label',
+              { className: 'dpr-check' },
+              h('input', { type: 'checkbox', checked: draft.cloudflare.autoLanRedirect, onChange: setCf('autoLanRedirect') }),
+              h('span', null, t('cfAutoLan')),
+            ),
+            h('p', { className: 'dpr-note' }, t('cfAutoLanHint')),
+            cf.error ? h('p', { className: 'dpr-err' }, cf.error) : null,
+            cfUrls.length ? h(
+              LabeledField,
+              { id: 'dpr-cf-remote', label: t('cfRemoteTitle'), hint: t('cfRemoteHint') },
+              h(
+                'div',
+                { className: 'dpr-row' },
+                h('input', { className: 'dpr-input', readOnly: true, value: cfUrls[0], onFocus: (event) => event.target.select() }),
+                h('button', { className: 'dpr-btn', onClick: () => copy(cfUrls[0], 'cf-url') }, copied === 'cf-url' ? t('copied') : t('copy')),
+                h('a', { className: 'dpr-btn', href: cfUrls[0], target: '_blank', rel: 'noreferrer' }, t('cfOpen')),
+              ),
+            ) : null,
+            h('p', { className: 'dpr-note' }, t('cfNote')),
+          ) : null,
         ),
         h(
           'div',
@@ -517,6 +731,9 @@ window.__ModuleLoader__.load({
           h('div', null, `${t('server')}: `, h('code', null, state.upstream?.origin ?? t('serverAuto'))),
           h('div', null, `${t('configPath')}: `, h('code', null, state.configPath ?? '')),
           h('div', null, `${t('logPath')}: `, h('code', null, state.logFile ?? '')),
+          state.cloudflareConfig?.enabled
+            ? h('div', null, `${t('cfLog')}: `, h('code', null, state.cloudflareLogFile ?? ''))
+            : null,
           h('div', null, t('footer')),
         ),
       );

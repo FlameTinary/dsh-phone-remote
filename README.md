@@ -5,13 +5,13 @@
 > [!IMPORTANT]
 > **本插件只适用于 DeepSeek Harness 桌面客户端。**
 >
-> dsh-phone-remote 是一个 **DeepSeek Harness 插件（Host + 设置页 Client）**，它运行在 DeepSeek Harness 客户端进程内部，只把本机正在运行的 Harness Web UI 镜像到局域网。它**不是**通用反向代理、**不是**内网穿透、**不是**独立网站，也**不能**用于 Claude Code、Cursor、Codex、VS Code、ChatGPT 或其他 AI 客户端。没有 DeepSeek Harness 客户端，这个插件没有任何作用。
+> dsh-phone-remote 是一个 **DeepSeek Harness 插件（Host + 设置页 Client）**，它运行在 DeepSeek Harness 客户端进程内部，只把本机正在运行的 Harness Web UI 镜像到局域网。它**不是**通用反向代理，也**不是**独立网站；可选的 Cloudflare 隧道只用于把 Harness 自己的 Web UI 暴露给你自己的手机。它**不能**用于 Claude Code、Cursor、Codex、VS Code、ChatGPT 或其他 AI 客户端。没有 DeepSeek Harness 客户端，这个插件没有任何作用。
 >
-> **DSH only.** This is a DeepSeek Harness plugin (Host + settings-page Client) for the **DeepSeek Harness desktop client**. It mirrors the client's local Web UI over your LAN. It is not a generic reverse proxy, tunnel, or standalone server, and it does not work with any other AI client.
+> **DSH only.** This is a DeepSeek Harness plugin (Host + settings-page Client) for the **DeepSeek Harness desktop client**. It mirrors the client's own Web UI, over the LAN or (optionally) through a Cloudflare tunnel. It is not a generic reverse proxy or standalone server, and it does not work with any other AI client.
 
-把手机或平板变成 DeepSeek Harness 的第二块屏幕：同一个局域网、一个链接，直接打开桌面客户端里正在进行的会话，不需要公网、不需要安装 App。
+把手机或平板变成 DeepSeek Harness 的第二块屏幕：同一个局域网一个链接直连；离开局域网时，可选用 Cloudflare 命名隧道（需要账号与域名）从外网打开桌面客户端里正在进行的会话。不需要安装 App。
 
-![手机远程访问的设置页](docs/settings-page.png)
+![手机远程访问的设置页（含 Cloudflare 命名隧道）](docs/settings-page.png)
 
 > 截图中的访问密钥已打码。
 
@@ -62,9 +62,10 @@
 | DeepSeek Harness 桌面客户端（macOS，`0.2.1-rc.3` 实测） | ✅ |
 | DeepSeek Harness 的其他版本 | ⚠️ 理论可用；宿主 API 或 Cookie 格式变化时可能需要适配 |
 | 手机 / 平板浏览器（同一局域网） | ✅ |
+| 手机 / 平板（外网 / 4G / 不同网络） | ✅ 通过可选的 Cloudflare 隧道；需安装 `cloudflared` |
 | Claude Code / Cursor / Codex / VS Code / ChatGPT / 其他 AI 客户端 | ❌ 完全不适用 |
 | 作为通用反向代理、静态服务器或内网穿透工具 | ❌ 不设计用于这些场景 |
-| 公网访问、跨网络访问 | ❌ 默认且有意只支持局域网 |
+| 直接公网暴露网关端口 | ❌ 请使用 Cloudflare 隧道，不要做端口映射 |
 
 它依赖 DeepSeek Harness 客户端的两个 Host 服务：
 
@@ -82,10 +83,11 @@
 - **访问密钥保护**：入口支持 `?k=` 自动登录、网关 Cookie 和可选 HTTP Basic，三种方式任选其一。
 - **局域网白名单**：只接受回环地址与配置中的 IPv4 CIDR，默认根据本机网卡生成 `/24` 白名单。
 - **自动代签 Harness 会话**：在客户端进程内用本机凭据为浏览器签发 30 天有效的会话 Cookie，上游返回 401 时自动换一次凭据重试。
-- **应用内设置页**：在插件详情页直接修改监听端口、上游端口、网段白名单、Basic 凭据、访问密钥与移动端增强；保存后自动重写 `config.json` 并重启网关。
-- **随插件启停**：在 DeepSeek Harness 的插件设置里关闭插件，监听端口立即关闭；重新打开即可恢复。
+- **外网访问（可选，Cloudflare）**：不在同一局域网或使用 4G/5G 时，通过 `cloudflared` 命名隧道连接（Token + 固定域名）。⚠️ Cloudflare 快速隧道不支持 SSE，Harness 会停在「加载插件…」，只适合连通性测试。局域网内仍优先直连，手机在家庭网络时会从 Cloudflare 入口 302 跳回局域网地址。
+- **应用内设置页**：在插件详情页直接修改监听端口、上游端口、网段白名单、Basic 凭据、访问密钥、移动端增强与 Cloudflare 隧道；保存后自动重写 `config.json` 并重启网关。
+- **随插件启停**：在 DeepSeek Harness 的插件设置里关闭插件，监听端口与隧道立即关闭；重新打开即可恢复。
 - **移动端抽屉增强**：窄屏下把 Harness 自带的侧边栏变成滑出抽屉，补一个汉堡按钮，并避免 iOS 输入框自动放大。
-- **零第三方依赖**：只用 Node.js 标准库。
+- **局域网模式零第三方依赖**：只用 Node.js 标准库；外网模式额外依赖官方 `cloudflared` 可执行文件（不随插件捆绑）。
 - **自带诊断**：仪表盘、`/__dshgw/status`、日志、`phone-url.txt`、`dsh-phone-remote status`。
 
 ---
@@ -98,7 +100,9 @@
 4. 通过鉴权后，插件读取本机 `~/.dsh/.credentials.yaml` 里的 `client-connection/browser-session` secret，用 HMAC-SHA256 代签 Harness 浏览器会话 Cookie，再转发请求。
 5. 对 HTML 文档请求，插件把移动端抽屉的 CSS/JS 注入到 `</body>` 前；其余资源原样透传。
 6. WebSocket 升级请求在鉴权后透传到上游，双向 pipe。
-7. 设置页（`client.js`）通过 `plugins.bundle.config` 槽位挂在插件详情页，调用同源接口读取/保存配置；保存后插件重建网关实例并重新监听。
+7. 启用 Cloudflare 时，插件管理一个 `cloudflared` 子进程：快速隧道从输出里解析 `trycloudflare.com` 地址，命名隧道通过 `TUNNEL_TOKEN` 连接；地址变化后写回 `phone-url.txt` 并出现在状态里。注意快速隧道不支持 SSE，只能做连通性测试。
+8. 请求从 Cloudflare 进来时，网关读取 `CF-Connecting-IP`，与本机公网 IP 比较；如果 `autoLanRedirect` 开启且两者相同（手机在家庭网络），302 跳到局域网链接，否则继续走 Cloudflare 代理。
+9. 设置页（`client.js`）通过 `plugins.bundle.config` 槽位挂在插件详情页，调用同源接口读取/保存配置；保存后插件重建网关与隧道实例并重新监听。
 
 除了这个仅限本机回环的配置接口，插件**不会**在 Harness Web 服务器上注册其他路由、不会修改 Harness 配置，也不会把凭据写进日志。
 
@@ -107,7 +111,8 @@
 ## 环境要求
 
 - **DeepSeek Harness 桌面客户端**（本插件唯一的运行宿主），且 Web UI 正在运行。
-- 电脑与手机在**同一局域网**（同一 Wi-Fi / 同一路由器下的有线与无线均可）。
+- 电脑与手机在**同一局域网**（同一 Wi-Fi / 同一路由器下的有线与无线均可），**或者**电脑安装 `cloudflared` 后使用外网模式。
+- 外网模式需要 Cloudflare 官方 `cloudflared`：macOS 可执行 `brew install cloudflared`，其他平台见 [Cloudflare 文档](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)；并确保电脑能访问 Cloudflare。
 - 端口 `58800` 未被占用（可在配置中修改）。
 - 插件安装器使用客户端内置的 Node 运行时；手动运行脚本需要 Node.js ≥ 20。
 - 已在 macOS 上测试；Linux/Windows 的 DSH 桌面版理论可用，但未实测。
@@ -143,7 +148,7 @@
 安装成功后用 `list_bundles` 应能看到：
 
 ```text
-@flametinary/dsh-phone-remote  0.2.1  availability=profile  installed=true  enabled=true
+@flametinary/dsh-phone-remote  0.3.0  availability=profile  installed=true  enabled=true
 ```
 
 启用 / 停用：
@@ -216,11 +221,38 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 打开 **插件 → 已安装插件 → 手机远程访问**，详情页会直接渲染配置面板：
 
 - **手机入口**：当前所有可用局域网链接，可一键复制；
+- **外网访问（Cloudflare）**：启用隧道、选择快速/命名模式、填 Token 与公网地址、查看连接状态和外网链接；
 - **网络**：监听端口、上游端口、IPv4 网段白名单、移动端抽屉增强；
 - **访问凭据**：Basic 用户名/密码、访问密钥（可显示、复制、重新生成）；
 - **保存并应用**：写入 `~/.dsh/phone-remote/config.json` 并自动重启网关，不需要手动关开插件。
 
 配置接口只监听在 Harness 自己的 `webServer` 上，且只接受本机回环地址；它要求携带 `x-phone-remote-config: 1` 的 JSON 请求，跨站请求无法通过浏览器预检。
+
+### 6. 不在同一局域网：使用 Cloudflare
+
+> ⚠️ **Cloudflare 快速隧道（`trycloudflare.com`）官方不支持 SSE**（[Cloudflare 文档](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)）。Harness 前端依赖 SSE 加载插件，走快速隧道会一直停在「加载插件…」，**不能完整使用**。要真正远程使用，请走**命名隧道**（需要 Cloudflare 账号和一个托管在 Cloudflare 的域名）。
+
+1. 在电脑上安装 `cloudflared`：
+
+   ```bash
+   brew install cloudflared
+   ```
+
+   Linux / Windows 见 [Cloudflare 下载页](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)。
+
+2. 在 [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) 创建一条**命名隧道**，在隧道的 Public Hostname 里新增一条：
+   - Hostname：`dsh.example.com`（换成你的域名）
+   - Service：`http://127.0.0.1:58800`
+   然后复制隧道 Token。
+3. 打开 **插件 → 已安装插件 → 手机远程访问 → 外网访问（Cloudflare）**，勾选「启用 Cloudflare 外网访问」。
+4. 连接方式选 **命名隧道**，填入 Token 和你绑定的公网地址（如 `https://dsh.example.com`），点「保存并应用」，等待状态变为「已连接」。
+5. 在「外网链接」里复制带 `?k=` 的地址（也可以点「打开」）；手机关掉 Wi-Fi、用 4G/5G 打开即可。
+
+**快速隧道**（不需要账号）仍保留在选项里，但只适合测试网络连通性，不能加载完整的 Harness 界面；每次重启地址都会变。
+
+**同一局域网会自动切回**：开启 `autoLanRedirect` 后，手机在家庭网络访问 Cloudflare 地址时，网关会用 `CF-Connecting-IP` 与本机公网 IP 比较，相同就 302 跳到局域网链接。这个判断依赖公网 IP 检测，少数运营商 CGNAT / 多出口网络可能不生效；不生效时 Cloudflare 地址仍然可用。
+
+> 命名隧道建议在 Cloudflare 侧再加一层 **Access**（邮箱/SSO）策略。本插件的访问密钥与 Basic 仍然有效，两者可以叠加。
 
 ---
 
@@ -238,7 +270,15 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
   "basicPass": "……",
   "upstreamPort": null,
   "uiEnhance": { "mobileDrawer": true },
-  "logMaxBytes": 1048576
+  "logMaxBytes": 1048576,
+  "cloudflare": {
+    "enabled": false,
+    "mode": "token",
+    "token": "",
+    "publicUrl": "",
+    "autoLanRedirect": true,
+    "cloudflaredPath": "cloudflared"
+  }
 }
 ```
 
@@ -252,6 +292,12 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 | `upstreamPort` | `null` | 上游 Harness 端口。一般留 `null` 自动发现；有多个 Harness 实例时可钉死。 |
 | `uiEnhance.mobileDrawer` | `true` | 是否注入移动端抽屉增强。关掉后手机仍可用，但侧边栏体验退化为桌面布局。 |
 | `logMaxBytes` | `1048576` | 日志轮转阈值；超过后轮转为 `gateway.log.1`。 |
+| `cloudflare.enabled` | `false` | 是否启用 Cloudflare 隧道。关闭时完全不启动 `cloudflared`。 |
+| `cloudflare.mode` | `"token"` | `token` 命名隧道（需账号，完整可用）；`quick` 临时地址，Cloudflare 不支持 SSE，Harness 无法完整加载。 |
+| `cloudflare.token` | `""` | 命名隧道的 Tunnel Token，只保存在本机 `config.json`（`0600`）。 |
+| `cloudflare.publicUrl` | `""` | 命名隧道在 Cloudflare 绑定的公网地址，例如 `https://dsh.example.com`。快速隧道忽略此项。 |
+| `cloudflare.autoLanRedirect` | `true` | 同一公网 IP 的手机访问 Cloudflare 入口时，是否 302 跳回局域网链接。 |
+| `cloudflare.cloudflaredPath` | `"cloudflared"` | `cloudflared` 可执行文件路径；Homebrew 通常已在 PATH 中。 |
 
 在设置页点「保存并应用」后网关会自动重启；手动编辑 JSON 后，仍需在插件设置里关闭再打开（或重启客户端）使其生效。
 
@@ -268,11 +314,14 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 这个插件把**整个 DeepSeek Harness 客户端的控制权**暴露给通过鉴权的设备。请认真阅读：
 
 - **访问密钥 = 完整权限。** 拿到链接或 Basic 密码的人可以读取会话、发消息、触发工具调用、审批权限请求。请像保护 SSH 私钥一样保护访问密钥。
-- **仅限局域网。** 默认白名单为本机 + 当前网卡的 `/24`，不要为了「在外面也能用」把 `allowCidrs` 改成 `0.0.0.0/0` 或在路由器上做端口映射。需要公网访问请使用 VPN（如 Tailscale / WireGuard），不要把本插件直接暴露到公网。
-- **没有 TLS。** 网关使用 HTTP/WS 明文传输，同一 Wi-Fi 下的其他人可能嗅探流量。只在你信任的网络中使用；不要在公共 Wi-Fi、酒店网络或公司访客网络启用。
+- **默认仅限局域网。** 默认白名单为本机 + 当前网卡的 `/24`。需要外网时请使用本插件的 Cloudflare 隧道，**不要**把 `allowCidrs` 改成 `0.0.0.0/0`，也不要在路由器上做端口映射。隧道会复用同一套访问密钥 / Basic 鉴权，不会绕过它们。
+- **外网入口扩大暴露面。** 一旦启用 Cloudflare，互联网上的任何人都能访问到登录页；访问密钥 / Basic 是唯一边界。强烈建议同时在 Cloudflare 侧配置 Access（邮箱、Google、GitHub 或 SSO）策略；不要把带 `?k=` 的链接发到公开群聊或提交到仓库。
+- **公网 IP 判断是启发式。** `autoLanRedirect` 在手机与电脑处于同一公网 IP 时跳回 LAN，但 CGNAT、多出口、代理或云网络可能判断失败；失败时 Cloudflare 入口仍可用，只是没有就近直连。
+- **局域网模式没有 TLS。** 局域网链接使用 HTTP/WS 明文，同一 Wi-Fi 下的其他人可能嗅探流量；Cloudflare 模式由 Cloudflare 终止 TLS，Cloudflare 到本机是回环 HTTP。不要在公共 Wi-Fi 或不可信网络启用局域网直连。
+- **Cloudflare Tunnel Token 等同电脑的网络权限。** 拿到 Token 的人可以在自己的机器上接续这条隧道；请只在设置页/本机 `config.json` 中保存，不要写进脚本或聊天记录。发现泄露时在 Cloudflare 控制台轮换 Token。
 - **Cookie 有效期为 30 天**，每次请求都会重新签发；凭据轮换或客户端升级后可能失效，重新打开 `?k=` 链接即可。
 - **配置页同样敏感。** 能打开设置页的人可以改端口、网段和访问密钥；配置接口只接受**本机回环地址**的请求，并要求带 `x-phone-remote-config: 1` 的 JSON 请求（跨站请求会被预检拦截）；手机设置页通过网关代理访问时仍走回环。即便如此，也请只在可信设备上打开设置页。
-- **配置文件含明文密钥**，权限为 `0600`；`phone-url.txt` 同样含密钥与 Basic 密码，请不要提交到 Git、不要发到群聊。
+- **配置文件含明文密钥与 Tunnel Token**，权限为 `0600`；`phone-url.txt` 同样含访问密钥与 Basic 密码，请不要提交到 Git、不要发到群聊。
 - **日志不记录 Cookie 值**，但会记录请求路径、来源 IP 与错误信息；分享日志前请自行检查。
 - **非官方插件**：它不修改客户端二进制，但以你的用户权限在客户端进程内运行。请只从可信来源安装，并在升级 DeepSeek Harness 后确认兼容性。
 
@@ -299,8 +348,8 @@ DeepSeek Harness → 插件 → 已安装插件 → **手机远程访问**：
 需要本机有 Node.js ≥ 20。也可以直接用绝对路径调用仓库内的 `bin/phone-remote.mjs`。
 
 ```bash
-dsh-phone-remote url       # 打印手机链接、Basic 凭据、监听地址、配置路径
-dsh-phone-remote status    # 请求 /__dshgw/status，检查网关是否在运行
+dsh-phone-remote url       # 打印局域网链接、已配置的 Cloudflare 链接、Basic 凭据、监听地址、配置路径
+dsh-phone-remote status    # 请求 /__dshgw/status，检查网关与隧道状态（含 cloudflare.publicUrl）
 dsh-phone-remote config    # 打印配置文件路径
 dsh-phone-remote help      # 帮助
 ```
@@ -323,8 +372,14 @@ dsh-phone-remote help      # 帮助
 | 客户端升级后**登录失效** | 会话 Cookie 格式可能变化。先更新插件；临时可在手机重新打开 `?k=` 链接。 |
 | **iOS 输入时页面放大** | 确认 `uiEnhance.mobileDrawer` 为 `true`；或升级到最新版本。 |
 | 仪表盘能开，但**手机链接是 127.0.0.1** | `listenHost` 被设成了回环地址，或本机没有非回环 IPv4。改回 `0.0.0.0`。 |
+| 外网链接显示 **1033 / tunnel not found** | `cloudflared` 没装好、路径不对，或命名隧道没有运行。先执行 `cloudflared --version`，再在设置页把 `cloudflaredPath` 指到绝对路径；查看 `~/.dsh/phone-remote/cloudflare.log`。 |
+| 快速隧道地址**每次重启都会变** | 这是 `trycloudflare.com` 的预期行为。需要固定地址请改用命名隧道（Token + Public Hostname）。 |
+| 走 Cloudflare 后一直停在**「加载插件…」** | Cloudflare 快速隧道不支持 SSE；Harness 前端依赖 SSE 加载插件。请改用命名隧道。 |
+| 命名隧道打开 **502** | Cloudflare 的 Public Hostname 必须指向 `http://127.0.0.1:58800`（或你改过的监听端口）；确认插件正在监听且端口一致。 |
+| 手机在家庭网络仍走 Cloudflare | `autoLanRedirect` 依赖公网 IP 判断，CGNAT / 多出口网络可能失效。可直接用局域网链接；或关闭该选项后手动切换。 |
+| 开着隧道但所有请求 **403 source address not allowed** | 隧道请求来自 `127.0.0.1`，请勿从 `allowCidrs` 中删除 `127.0.0.1/32`。 |
 
-日志：`~/.dsh/phone-remote/gateway.log`（超过 1 MB 自动轮转）。
+日志：`~/.dsh/phone-remote/gateway.log` 与 `cloudflare.log`（各超过 1 MB 自动轮转）。
 
 ---
 
@@ -337,7 +392,7 @@ cd /path/to/dsh-phone-remote
 git pull
 ```
 
-然后在 DeepSeek Harness 中**重启客户端**，以加载新的 Host / Client JS。若包名或 `dsh.client` 声明发生变化（0.2.0 起新增设置页），需要卸载后重新安装一次；配置与密钥保留在 `~/.dsh/phone-remote/`。
+然后在 DeepSeek Harness 的「插件」页把本插件**卸载再重新安装**一次，以加载新的 Host / Client JS；配置、密钥与隧道 Token 保留在 `~/.dsh/phone-remote/`。只关开插件开关通常不会刷新客户端 JS，尤其是 `client.js` 有改动时。
 
 ### 卸载
 
@@ -411,7 +466,9 @@ docs/settings-page.png # 设置页截图
 
 - **只支持 DeepSeek Harness**，不支持任何其他客户端或普通 Web 应用。
 - 仅支持 **IPv4 CIDR** 白名单；IPv6 来源会被拒绝。
-- **没有 TLS**，也不内置证书管理；公网访问请自行套 VPN 或反向代理。
+- **局域网模式没有 TLS**；Cloudflare 模式由 Cloudflare 终止 TLS。插件本身不管理证书。
+- **外网模式依赖 `cloudflared`**（不随插件捆绑）。快速隧道不支持 SSE（Harness 无法完整加载），且地址每次重启都会变；固定地址与完整功能都需要命名隧道。
+- **`autoLanRedirect` 是公网 IP 启发式**：CGNAT、多出口、代理网络可能判断失败，失败时仍走 Cloudflare，只是不会就近直连。
 - 移动端增强依赖 Harness Web UI 的 DOM 结构（`titleRow`、`aria-label="打开侧边栏"` 等），客户端大改版后可能需要适配。
 - 会话 Cookie 的签名格式依赖客户端实现；DSH 升级后若鉴权失败，需要更新插件。
 - 端口占用时只重试、不自动改端口；需要手动修改 `listenPort`。

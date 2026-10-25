@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Phone Remote",
-    "description": "Open this DeepSeek Harness desktop client from a phone or tablet on the same LAN. Access-key protected, and the listener starts or stops with the plugin. Includes an in-app settings page for ports, allowed networks and access credentials."
+    "description": "Open this DeepSeek Harness desktop client from a phone or tablet: direct on the same LAN, or through an optional Cloudflare tunnel when away. Access-key protected, listener follows the plugin, with an in-app settings page for ports, networks, credentials and Cloudflare."
   }
 }
